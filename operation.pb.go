@@ -26,20 +26,13 @@ type StringFilterOperation struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
-	Eq  *wrapperspb.StringValue `protobuf:"bytes,1,opt,name=eq,json=$eq,proto3" json:"eq,omitempty"`
-	Neq *wrapperspb.StringValue `protobuf:"bytes,2,opt,name=neq,json=$neq,proto3" json:"neq,omitempty"`
-	//  google.protobuf.StringValue contains=3 [json_name="$contains"];
-	//  google.protobuf.StringValue starts_with = 4 [json_name="$starts_with"];
-	//  google.protobuf.StringValue nstarts_with=5 [json_name="$nstarts_with"];
-	//  google.protobuf.StringValue ends_with=6 [json_name="$ends_with"];
-	//  google.protobuf.StringValue nends_with=7 [json_name="$nends_with"];
+	Eq    *wrapperspb.StringValue   `protobuf:"bytes,1,opt,name=eq,json=$eq,proto3" json:"eq,omitempty"`
+	Neq   *wrapperspb.StringValue   `protobuf:"bytes,2,opt,name=neq,json=$neq,proto3" json:"neq,omitempty"`
 	In    []*wrapperspb.StringValue `protobuf:"bytes,8,rep,name=in,json=$in,proto3" json:"in,omitempty"`
 	Nin   []*wrapperspb.StringValue `protobuf:"bytes,9,rep,name=nin,json=$nin,proto3" json:"nin,omitempty"`
 	Null  *wrapperspb.BoolValue     `protobuf:"bytes,10,opt,name=null,json=$null,proto3" json:"null,omitempty"`
 	Nnull *wrapperspb.BoolValue     `protobuf:"bytes,11,opt,name=nnull,json=$nnull,proto3" json:"nnull,omitempty"`
-	//  google.protobuf.BoolValue empty=12 [json_name="$empty"];
-	//  google.protobuf.BoolValue nmpty=13 [json_name="$nmpty"];
-	Like *wrapperspb.StringValue `protobuf:"bytes,14,opt,name=like,json=$like,proto3" json:"like,omitempty"`
+	Like  *wrapperspb.StringValue   `protobuf:"bytes,14,opt,name=like,json=$like,proto3" json:"like,omitempty"`
 }
 
 func (x *StringFilterOperation) Reset() {
@@ -1270,9 +1263,9 @@ var file_operation_proto_rawDesc = []byte{
 	0x0a, 0x05, 0x6e, 0x6e, 0x75, 0x6c, 0x6c, 0x18, 0x0a, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x1a, 0x2e,
 	0x67, 0x6f, 0x6f, 0x67, 0x6c, 0x65, 0x2e, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x62, 0x75, 0x66, 0x2e,
 	0x42, 0x6f, 0x6f, 0x6c, 0x56, 0x61, 0x6c, 0x75, 0x65, 0x52, 0x06, 0x24, 0x6e, 0x6e, 0x75, 0x6c,
-	0x6c, 0x42, 0x1c, 0x5a, 0x1a, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
-	0x67, 0x6f, 0x78, 0x69, 0x61, 0x6f, 0x79, 0x2f, 0x72, 0x71, 0x6c, 0x3b, 0x72, 0x71, 0x6c, 0x62,
-	0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x6c, 0x42, 0x18, 0x5a, 0x16, 0x67, 0x69, 0x74, 0x68, 0x75, 0x62, 0x2e, 0x63, 0x6f, 0x6d, 0x2f,
+	0x61, 0x38, 0x6d, 0x2f, 0x72, 0x71, 0x6c, 0x3b, 0x72, 0x71, 0x6c, 0x62, 0x06, 0x70, 0x72, 0x6f,
+	0x74, 0x6f, 0x33,
 }
 
 var (
