@@ -10,17 +10,17 @@ message StringFilterOperation{
   google.protobuf.StringValue eq =1 [json_name="$eq"];
   google.protobuf.StringValue neq=2 [json_name="$neq"];
 
-  google.protobuf.StringValue contains=3 [json_name="$contains"];
-  google.protobuf.StringValue starts_with = 4 [json_name="$starts_with"];
-  google.protobuf.StringValue nstarts_with=5 [json_name="$nstarts_with"];
-  google.protobuf.StringValue ends_with=6 [json_name="$ends_with"];
-  google.protobuf.StringValue nends_with=7 [json_name="$nends_with"];
+//  google.protobuf.StringValue contains=3 [json_name="$contains"];
+//  google.protobuf.StringValue starts_with = 4 [json_name="$starts_with"];
+//  google.protobuf.StringValue nstarts_with=5 [json_name="$nstarts_with"];
+//  google.protobuf.StringValue ends_with=6 [json_name="$ends_with"];
+//  google.protobuf.StringValue nends_with=7 [json_name="$nends_with"];
   repeated google.protobuf.StringValue in=8 [json_name="$in"];
   repeated google.protobuf.StringValue nin=9 [json_name="$nin"];
   google.protobuf.BoolValue  null=10 [json_name="$null"];
   google.protobuf.BoolValue nnull=11 [json_name="$nnull"];
-  google.protobuf.BoolValue empty=12 [json_name="$empty"];
-  google.protobuf.BoolValue nmpty=13 [json_name="$nmpty"];
+//  google.protobuf.BoolValue empty=12 [json_name="$empty"];
+//  google.protobuf.BoolValue nmpty=13 [json_name="$nmpty"];
   google.protobuf.StringValue like=14 [json_name="$like"];
 }
 
@@ -45,8 +45,8 @@ message DateFilterOperators{
 message DoubleFilterOperators{
   google.protobuf.DoubleValue  eq =1 [json_name="$eq"];
   google.protobuf.DoubleValue  neq=2 [json_name="$neq"];
-  repeated google.protobuf.DoubleValue  in=3;
-  repeated google.protobuf.DoubleValue  nin=4;
+  repeated google.protobuf.DoubleValue  in=3 [json_name="$in"];
+  repeated google.protobuf.DoubleValue  nin=4 [json_name="$nin"];
   google.protobuf.DoubleValue  gt =5 [json_name="$gt"];
   google.protobuf.DoubleValue  gte =6 [json_name="$gte"];
   google.protobuf.DoubleValue  lt =7 [json_name="$lt"];
