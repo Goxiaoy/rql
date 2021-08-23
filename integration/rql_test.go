@@ -8,8 +8,9 @@ import (
 	"time"
 
 	"github.com/a8m/rql"
-	_ "github.com/go-sql-driver/mysql"
-	"github.com/jinzhu/gorm"
+	"gorm.io/driver/mysql"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var (
@@ -22,17 +23,18 @@ var (
 )
 
 type User struct {
-	ID          int       `rql:"filter,sort"`
-	Admin       bool      `rql:"filter"`
-	Name        string    `rql:"filter"`
-	AddressName string    `rql:"filter"`
-	CreatedAt   time.Time `rql:"filter"`
-	UnixTime    time.Time `rql:"filter,layout=UnixDate"`
-	CustomTime  time.Time `rql:"filter,layout=2006-01-02 15:04"`
+	ID           int        `rql:"filter,sort"`
+	Admin        bool       `rql:"filter"`
+	Name         string     `rql:"filter"`
+	AddressName  string     `rql:"filter"`
+	CreatedAt    time.Time  `rql:"filter"`
+	UnixTime     time.Time  `rql:"filter,layout=UnixDate"`
+	CustomTime   time.Time  `rql:"filter,layout=2006-01-02 15:04"`
+	NullableTime *time.Time `rql:"filter,layout=2006-01-02 15:04"`
 }
 
-func TestMySQL(t *testing.T) {
-	db := Connect(t)
+func TestDB(t *testing.T) {
+	db := Connect(t).Debug()
 	SetUp(t, db)
 	defer Teardown(t, db)
 	AssertCount(t, db, 1, `{ "filter": { "id": 1 } }`)
@@ -43,6 +45,8 @@ func TestMySQL(t *testing.T) {
 	AssertCount(t, db, 50, `{ "filter": { "id": { "$gt": 50 } } }`)
 	AssertCount(t, db, 50, `{ "filter": { "id": { "$lte": 50 } } }`)
 	AssertCount(t, db, 99, `{ "filter": { "$or": [{ "id":{ "$gt": 50 } }, { "id":{ "$lt": 50 } }] } }`)
+	AssertCount(t, db, 25, `{ "filter": { "nullable_time": {"$null": true } } }`)
+	AssertCount(t, db, 75, `{ "filter": { "nullable_time": {"$nnull": true } } }`)
 	AssertCount(t, db, 1, `{ "filter": {"name": "user_1" } }`)
 	AssertCount(t, db, 100, `{ "filter": {"name": {"$like": "user%" } } }`) // all
 	AssertCount(t, db, 2, `{ "filter": {"name": {"$like": "%10%" } } }`)    // 10 or 100
@@ -65,10 +69,10 @@ func TestMySQL(t *testing.T) {
 	AssertSelect(t, db, []string{"address_1", "address_2"}, `{ "select": ["address_name"], "limit": 2 }`)
 }
 
-func AssertCount(t *testing.T, db *gorm.DB, expected int, query string) {
+func AssertCount(t *testing.T, db *gorm.DB, expected int64, query string) {
 	params, err := QueryParser.Parse([]byte(query))
 	must(t, err, "parse query: %s", query)
-	count := 0
+	var count int64 = 0
 	err = db.Model(User{}).
 		Where(params.FilterExp, params.FilterArgs...).
 		Count(&count).Error
@@ -122,10 +126,18 @@ func AssertSelect(t *testing.T, db *gorm.DB, expected []string, query string) {
 
 func Connect(t *testing.T) *gorm.DB {
 	if MySQLConn == "" {
-		t.Skip("missing database connection string")
+		db, err := gorm.Open(sqlite.Open("file::memory:?cache=shared"))
+		if err == nil {
+			sqlDB, err := db.DB()
+			if err == nil {
+				sqlDB.SetMaxIdleConns(1)
+				sqlDB.SetMaxOpenConns(1)
+				return db
+			}
+		}
 	}
 	for i := 1; i <= 5; i++ {
-		db, err := gorm.Open("mysql", MySQLConn)
+		db, err := gorm.Open(mysql.Open(MySQLConn))
 		if err == nil {
 			return db
 		}
@@ -136,20 +148,25 @@ func Connect(t *testing.T) *gorm.DB {
 }
 
 func SetUp(t *testing.T, db *gorm.DB) {
-	must(t, db.AutoMigrate(User{}).Error, "migrate db")
+	must(t, db.AutoMigrate(User{}), "migrate db")
 	var wg sync.WaitGroup
 	wg.Add(100)
 	for i := 1; i <= 100; i++ {
 		go func(i int) {
 			defer wg.Done()
+			var nt *time.Time
+			if i%4 != 0 {
+				nt = &CreateTime
+			}
 			err := db.Create(&User{
-				ID:          i,
-				Admin:       i%2 == 0,
-				Name:        fmt.Sprintf("user_%d", i),
-				AddressName: fmt.Sprintf("address_%d", i),
-				CreatedAt:   CreateTime.Add(time.Minute),
-				UnixTime:    CreateTime.Add(time.Minute),
-				CustomTime:  CreateTime.Add(time.Minute),
+				ID:           i,
+				Admin:        i%2 == 0,
+				Name:         fmt.Sprintf("user_%d", i),
+				AddressName:  fmt.Sprintf("address_%d", i),
+				CreatedAt:    CreateTime.Add(time.Minute),
+				UnixTime:     CreateTime.Add(time.Minute),
+				CustomTime:   CreateTime.Add(time.Minute),
+				NullableTime: nt,
 			}).Error
 			must(t, err, "create user")
 		}(i)
@@ -158,8 +175,12 @@ func SetUp(t *testing.T, db *gorm.DB) {
 }
 
 func Teardown(t *testing.T, db *gorm.DB) {
-	must(t, db.DropTable(User{}).Error, "drop table")
-	must(t, db.Close(), "close conn to mysql")
+	sqlDB, err := db.DB()
+	if err != nil {
+		t.Fatal("can not close")
+	}
+	must(t, db.Migrator().DropTable(User{}), "drop table")
+	must(t, sqlDB.Close(), "close conn to mysql")
 }
 
 func must(t *testing.T, err error, msg string, args ...interface{}) {

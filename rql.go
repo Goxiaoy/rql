@@ -293,47 +293,47 @@ func (p *Parser) parseField(sf reflect.StructField) error {
 	switch typ := indirect(sf.Type); typ.Kind() {
 	case reflect.Bool:
 		f.ValidateFn = validateBool
-		filterOps = append(filterOps, EQ, NEQ)
+		filterOps = append(filterOps, EQ, NEQ, NULL, NNULL)
 	case reflect.String:
 		f.ValidateFn = validateString
-		filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, LIKE, IN, NIN)
+		filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, LIKE, IN, NIN, NULL, NNULL)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		f.ValidateFn = validateInt
 		f.CovertFn = convertInt
-		filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN)
+		filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN, NULL, NNULL)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 		f.ValidateFn = validateUInt
 		f.CovertFn = convertInt
-		filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN)
+		filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN, NULL, NNULL)
 	case reflect.Float32, reflect.Float64:
 		f.ValidateFn = validateFloat
-		filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN)
+		filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN, NULL, NNULL)
 	case reflect.Struct:
 		switch v := reflect.Zero(typ); v.Interface().(type) {
 		case sql.NullBool:
 			f.ValidateFn = validateBool
-			filterOps = append(filterOps, EQ, NEQ)
+			filterOps = append(filterOps, EQ, NEQ, NULL, NNULL)
 		case sql.NullString:
 			f.ValidateFn = validateString
-			filterOps = append(filterOps, EQ, NEQ, IN, NIN)
+			filterOps = append(filterOps, EQ, NEQ, IN, NIN, NULL, NNULL)
 		case sql.NullInt64:
 			f.ValidateFn = validateInt
 			f.CovertFn = convertInt
-			filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN)
+			filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN, NULL, NNULL)
 		case sql.NullFloat64:
 			f.ValidateFn = validateFloat
-			filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN)
+			filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN, NULL, NNULL)
 		case time.Time:
 			f.ValidateFn = validateTime(layout)
 			f.CovertFn = convertTime(layout)
-			filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN)
+			filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN, NULL, NNULL)
 		default:
 			if !v.Type().ConvertibleTo(reflect.TypeOf(time.Time{})) {
 				return fmt.Errorf("rql: field type for %q is not supported", sf.Name)
 			}
 			f.ValidateFn = validateTime(layout)
 			f.CovertFn = convertTime(layout)
-			filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN)
+			filterOps = append(filterOps, EQ, NEQ, LT, LTE, GT, GTE, IN, NIN, NULL, NNULL)
 		}
 	default:
 		return fmt.Errorf("rql: field type for %q is not supported", sf.Name)
@@ -443,7 +443,7 @@ func (p *parseState) field(f *field, v interface{}) {
 	// default equality check.
 	if !ok {
 		must(f.ValidateFn(v), "invalid datatype for field %q", f.Name)
-		p.WriteString(p.fmtOp(f.Name, EQ,1))
+		p.WriteString(p.fmtOp(f.Name, EQ, 1))
 		p.values = append(p.values, f.CovertFn(v))
 	}
 	var i int
@@ -456,19 +456,29 @@ func (p *parseState) field(f *field, v interface{}) {
 		}
 		expect(f.FilterOps[opName], "can not apply op %q on field %q", opName, f.Name)
 		validateFn := f.ValidateFn
-		isSlice := isSliceOp(p,opName)
+		convertFn := f.CovertFn
+		isSlice := isSliceOp(p, opName)
+		isNull, _ := isNullOp(p, opName)
 		if isSlice {
 			validateFn = validateSlice(validateFn)
 		}
-		must(f.ValidateFn(opVal), "invalid datatype or format for field %q", f.Name)
+		if isNull {
+			validateFn = validateBool
+			convertFn = func(i interface{}) interface{} {
+				return "NULL"
+			}
+		}
+		must(validateFn(opVal), "invalid datatype or format for field %q", f.Name)
 		if isSlice {
-			sliceRaw := convertSlice(f.CovertFn)(opVal)
+			sliceRaw := convertSlice(convertFn)(opVal)
 			slice, _ := sliceRaw.([]interface{})
 			p.WriteString(p.fmtOp(f.Name, Op(opName[1:]), len(slice)))
 			p.values = append(p.values, slice...)
-		}else{
+		} else {
 			p.WriteString(p.fmtOp(f.Name, Op(opName[1:]), 1))
-			p.values = append(p.values, f.CovertFn(opVal))
+			if !isNull {
+				p.values = append(p.values, convertFn(opVal))
+			}
 		}
 		i++
 	}
@@ -484,6 +494,9 @@ func (p *Parser) fmtOp(field string, op Op, placeHolderCount int) string {
 	placeHolder := "?"
 	if placeHolderCount > 1 {
 		placeHolder = "(" + strings.Trim(strings.Repeat("?,", placeHolderCount), ",") + ")"
+	}
+	if isNull(op) {
+		return colName + " " + op.SQL()
 	}
 	return colName + " " + op.SQL() + " " + placeHolder
 }
@@ -646,9 +659,27 @@ func valueFn(v interface{}) interface{} {
 	return v
 }
 
-func isSliceOp(p *parseState,opName string) bool {
+func isSliceOp(p *parseState, opName string) bool {
 	for _, op := range sliceOp {
-		if p.op(op) == opName{
+		if p.op(op) == opName {
+			return true
+		}
+	}
+	return false
+}
+
+func isNullOp(p *parseState, opName string) (bool, Op) {
+	for _, op := range boolOp {
+		if p.op(op) == opName {
+			return true, op
+		}
+	}
+	return false, ""
+}
+
+func isNull(o Op) bool {
+	for _, op := range boolOp {
+		if o == op {
 			return true
 		}
 	}

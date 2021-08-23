@@ -16,17 +16,19 @@ func (o Op) SQL() string {
 
 // Operators that support by rql.
 const (
-	EQ   = Op("eq")   // =
-	NEQ  = Op("neq")  // <>
-	LT   = Op("lt")   // <
-	GT   = Op("gt")   // >
-	LTE  = Op("lte")  // <=
-	GTE  = Op("gte")  // >=
-	LIKE = Op("like") // LIKE "PATTERN"
-	IN   = Op("in")   // in
-	NIN  = Op("nin")  // not in
-	OR   = Op("or")   // disjunction
-	AND  = Op("and")  // conjunction
+	EQ    = Op("eq")    // =
+	NEQ   = Op("neq")   // <>
+	LT    = Op("lt")    // <
+	GT    = Op("gt")    // >
+	LTE   = Op("lte")   // <=
+	GTE   = Op("gte")   // >=
+	LIKE  = Op("like")  // LIKE "PATTERN"
+	IN    = Op("in")    // in
+	NIN   = Op("nin")   // not in
+	NULL  = Op("null")  // null
+	NNULL = Op("nnull") // null
+	OR    = Op("or")    // disjunction
+	AND   = Op("and")   // conjunction
 )
 
 // Default values for configuration.
@@ -50,21 +52,27 @@ var (
 		'-': "desc",
 	}
 	opFormat = map[Op]string{
-		EQ:   "=",
-		NEQ:  "<>",
-		LT:   "<",
-		GT:   ">",
-		LTE:  "<=",
-		GTE:  ">=",
-		LIKE: "LIKE",
-		IN:   "IN",
-		NIN:  "NOT IN",
-		OR:   "OR",
-		AND:  "AND",
+		EQ:    "=",
+		NEQ:   "<>",
+		LT:    "<",
+		GT:    ">",
+		LTE:   "<=",
+		GTE:   ">=",
+		LIKE:  "LIKE",
+		IN:    "IN",
+		NIN:   "NOT IN",
+		NULL:  "IS NULL",
+		NNULL: "IS NOT NULL",
+		OR:    "OR",
+		AND:   "AND",
 	}
-	sliceOp =  []Op{
+	sliceOp = []Op{
 		IN,
 		NIN,
+	}
+	boolOp = []Op{
+		NULL,
+		NNULL,
 	}
 )
 
